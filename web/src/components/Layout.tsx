@@ -11,6 +11,7 @@ export default function Layout() {
           </Link>
           <nav className="nav-links">
             <NavLink to="/" end>Home</NavLink>
+            <NavLink to="/venues">Venues</NavLink>
           </nav>
         </div>
       </header>

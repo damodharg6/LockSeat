@@ -108,3 +108,12 @@ table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--sl-line); }
 th { color: var(--sl-ink-soft); font-weight: 600; font-size: .9rem; }
 .table-wrap { overflow-x: auto; }
+
+.pager { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+
+.seat-section + .seat-section { margin-top: 24px; }
+.seat-section h3 { font-size: 1rem; margin: 0 0 8px; }
+.seat-grid { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.seat-row { display: flex; gap: 3px; align-items: center; }
+.seat-row-label { font-family: var(--sl-mono); font-size: .75rem; color: var(--sl-ink-soft); min-width: 2.2em; }
+.seat { width: 10px; height: 10px; flex: none; border-radius: 3px; background: var(--sl-accent); opacity: .85; }

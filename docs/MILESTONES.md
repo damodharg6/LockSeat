@@ -8,7 +8,7 @@ web app shows the new API features, and README.md, docs/ABOUT.md and the Build p
 | # | Branch | Title | Status |
 |---|---|---|---|
 | M0 | `m0-foundation` | Project foundation | Done |
-| M1 | `m1-venues` | Venues, sections and seats | Not started |
+| M1 | `m1-venues` | Venues, sections and seats | Done |
 | M2 | `m2-events-inventory` | Events, price tiers and seat inventory | Not started |
 | M3 | `m3-auth` | Users and JWT auth | Not started |
 | M4 | `m4-holds` | Seat holds under concurrency | Not started |
@@ -40,8 +40,10 @@ Tests: exception handler returns ProblemDetail shapes; app context starts agains
 ## M1 · Venues, sections and seats · `m1-venues`
 
 - Migration `V1__venues_sections_seats.sql`.
-- Organiser endpoints: create/list/get venues; add sections; bulk-create seats per section from a
-  row/seat layout (e.g. rows A–T, seats 1–30).
+- `POST /api/v1/venues`, `GET /api/v1/venues` (paginated), `GET /api/v1/venues/{id}` (sections and
+  rows), `POST /api/v1/venues/{id}/seats` (bulk-create a block of rows × seats, creating the section
+  if needed, max 10,000 seats per request), `GET /api/v1/venues/{id}/seats` (paginated).
+- Write endpoints are open until auth lands; they become organiser-only then.
 - Seats unique per (section, row, number). `Seat` uses a pooled sequence (allocationSize 50) with
   JDBC batching.
 - Paginated venue list.

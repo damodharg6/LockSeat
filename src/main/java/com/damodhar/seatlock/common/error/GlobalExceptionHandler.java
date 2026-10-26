@@ -6,6 +6,8 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -44,6 +46,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ProblemDetail handleConflict(ConflictException ex) {
         return problem(HttpStatus.CONFLICT, "conflict", "Conflict", ex.getMessage());
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ProblemDetail handleBadRequest(BadRequestException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "bad-request", "Bad request", ex.getMessage());
+    }
+
+    /** A unique or foreign key constraint fired, usually because two requests raced. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleIntegrityViolation(DataIntegrityViolationException ex) {
+        log.info("Constraint violation: {}", ex.getMostSpecificCause().getMessage());
+        return problem(HttpStatus.CONFLICT, "conflict", "Conflict",
+                "The request conflicts with existing data.");
+    }
+
+    /** Unknown property in a {@code sort} query parameter. */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ProblemDetail handleBadSort(PropertyReferenceException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "invalid-sort", "Invalid sort",
+                "Cannot sort by '" + ex.getPropertyName() + "'.");
     }
 
     @ExceptionHandler(Exception.class)

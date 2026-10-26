@@ -142,7 +142,7 @@ k6 load test against the running app with several instances.
 
 ## 6. API conventions
 
-- REST + JSON under `/api`. Versioning via path is deferred until a breaking change is needed.
+- REST + JSON under `/api/v1`.
 - Controllers only map HTTP to service calls. Request and response bodies are Java `record` DTOs;
   entities never leave the service layer.
 - Errors: `common/error/GlobalExceptionHandler` returns RFC 9457 `ProblemDetail`
