@@ -1,0 +1,16 @@
+# Render blueprint for the SeatLock API. Secret values are set in the Render dashboard.
+services:
+  - type: web
+    name: seatlock-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: SEATLOCK_WEB_ORIGIN
+        value: https://seatlock-tickets.netlify.app

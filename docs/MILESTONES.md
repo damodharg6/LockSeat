@@ -7,7 +7,7 @@ web app shows the new API features, and README.md, docs/ABOUT.md and the Build p
 
 | # | Branch | Title | Status |
 |---|---|---|---|
-| M0 | `m0-foundation` | Project foundation | Not started |
+| M0 | `m0-foundation` | Project foundation | Done |
 | M1 | `m1-venues` | Venues, sections and seats | Not started |
 | M2 | `m2-events-inventory` | Events, price tiers and seat inventory | Not started |
 | M3 | `m3-auth` | Users and JWT auth | Not started |
@@ -27,7 +27,9 @@ web app shows the new API features, and README.md, docs/ABOUT.md and the Build p
   generic 500 without leaking internals).
 - `common/web/PageResponse<T>`.
 - `AbstractIntegrationTest` with a shared PostgreSQL 16 Testcontainer.
-- `docker-compose.yml` (PostgreSQL, Redis, Kafka), `Dockerfile`, `render.yaml`, `web/netlify.toml`.
+- `docker-compose.yml` (PostgreSQL; Redis and Kafka join in M6 and M7), `Dockerfile`, `render.yaml`,
+  `web/netlify.toml`.
+- Actuator health and OpenAPI / Swagger UI.
 - GitHub Actions: `mvn verify` and the web build on every PR.
 - Web: Vite + React + TypeScript scaffold, brand tokens in `web/src/index.css`, Home page with the
   Build progress list.

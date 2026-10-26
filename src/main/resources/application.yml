@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: seatlock
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5440/seatlock}
+    username: ${SPRING_DATASOURCE_USERNAME:seatlock}
+    password: ${SPRING_DATASOURCE_PASSWORD:seatlock}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+  flyway:
+    enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+seatlock:
+  web-origin: ${SEATLOCK_WEB_ORIGIN:http://localhost:5173}

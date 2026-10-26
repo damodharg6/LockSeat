@@ -12,3 +12,4 @@ CLAUDE.local.md
 .claude/
 web/node_modules/
 web/dist/
+*.tsbuildinfo
