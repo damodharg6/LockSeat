@@ -12,5 +12,7 @@ services:
         sync: false
       - key: SPRING_DATASOURCE_PASSWORD
         sync: false
+      - key: JWT_SECRET
+        generateValue: true
       - key: SEATLOCK_WEB_ORIGIN
         value: https://seatlock-tickets.netlify.app

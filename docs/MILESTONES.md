@@ -1,6 +1,6 @@
 # SeatLock milestones
 
-Status: draft for review. One branch and one pull request per milestone, named `mN-short-name`.
+One branch and one pull request per milestone, named `mN-short-name`.
 Each milestone is done when `mvn verify` and `npm ci && npm run lint && npm run build` pass, the
 web app shows the new API features, and README.md, docs/ABOUT.md and the Build progress list in
 `web/src/pages/Home.tsx` are updated.
@@ -9,8 +9,8 @@ web app shows the new API features, and README.md, docs/ABOUT.md and the Build p
 |---|---|---|---|
 | M0 | `m0-foundation` | Project foundation | Done |
 | M1 | `m1-venues` | Venues, sections and seats | Done |
-| M2 | `m2-events-inventory` | Events, price tiers and seat inventory | Not started |
-| M3 | `m3-auth` | Users and JWT auth | Not started |
+| M2 | `m2-auth` | Users, signup/login, JWT, roles | In progress |
+| M3 | `m3-events-inventory` | Events + event seat inventory | Not started |
 | M4 | `m4-holds` | Seat holds under concurrency | Not started |
 | M5 | `m5-checkout` | Checkout, fake payments and tickets | Not started |
 | M6 | `m6-redis` | Seat-map cache and rate limiting | Not started |
@@ -43,7 +43,7 @@ Tests: exception handler returns ProblemDetail shapes; app context starts agains
 - `POST /api/v1/venues`, `GET /api/v1/venues` (paginated), `GET /api/v1/venues/{id}` (sections and
   rows), `POST /api/v1/venues/{id}/seats` (bulk-create a block of rows × seats, creating the section
   if needed, max 10,000 seats per request), `GET /api/v1/venues/{id}/seats` (paginated).
-- Write endpoints are open until auth lands; they become organiser-only then.
+- Write endpoints were open in M1; M2 makes them organiser-only.
 - Seats unique per (section, row, number). `Seat` uses a pooled sequence (allocationSize 50) with
   JDBC batching.
 - Paginated venue list.
@@ -52,28 +52,40 @@ Tests: exception handler returns ProblemDetail shapes; app context starts agains
 Tests: duplicate seat rejected (409), unknown venue (404), invalid layout (400), batch insert of a
 large layout.
 
-## M2 · Events, price tiers and seat inventory · `m2-events-inventory`
+## M2 · Users, signup/login, JWT, roles · `m2-auth`
 
-- Migration `V2__events_inventory.sql`: `event`, `price_tier`, `event_seat`.
-- Create event (DRAFT) at a venue, attach price tiers (`price_paise BIGINT`) to sections.
+- Migration `V2__users.sql`: `users` with unique lowercase email and a role check.
+- `POST /api/v1/auth/signup` → 201, role BUYER, email stored lowercase, password 8–72 characters
+  (and at most 72 bytes), hashed with BCrypt. Duplicate email → 409.
+- `POST /api/v1/auth/login` → `{accessToken, tokenType, expiresIn}`. Unknown email and wrong
+  password both return the same 401.
+- `GET /api/v1/users/me` → current user, never the password hash.
+- Stateless HS256 JWT via `spring-boot-starter-oauth2-resource-server`, secret from `JWT_SECRET`
+  (at least 32 bytes; the app will not start without it outside the `dev` profile), 15-minute
+  expiry, claims `sub` (user id), `email`, `role`.
+- Spring Security: stateless sessions, CSRF off, 401/403 as ProblemDetail.
+- Public: auth endpoints, `GET` venues and seats, `/actuator/health`, Swagger. `POST` venues and
+  seats need ORGANISER or ADMIN. Everything else needs a valid token.
+- Dev profile creates one ORGANISER account on startup (`DevOrganiserSeeder`).
+- Web: sign up, sign in, sign out, account page; venue and seat forms shown only to organisers.
+
+Tests: BCrypt hashing and per-user salt, duplicate email, bad login with identical messages,
+72-byte limit, token claims and expiry, missing/short secret fails startup, /users/me with and
+without a token, expired / tampered / foreign-key / garbage tokens get 401, BUYER gets 403 and
+ORGANISER / ADMIN get 201 on venue writes, anonymous writes get 401, reads stay public.
+
+## M3 · Events + event seat inventory · `m3-events-inventory`
+
+- Migration `V3__events_inventory.sql`: `event`, `price_tier`, `event_seat`.
+- Organiser creates an event (DRAFT) at a venue, attaches price tiers (`price_paise BIGINT`) to
+  sections. Organisers manage only their own events.
 - Publish event: generates one `event_seat` per venue seat in batches (pooled sequence), status
   AVAILABLE. Publishing twice is rejected.
 - Public endpoints: paginated list of published events; seat map for an event with status and price.
 - Web: events list, event page with the seat map coloured by status and tier.
 
 Tests: publish without price tiers fails; double publish fails; seat count matches venue; money
-stays in paise end to end.
-
-## M3 · Users and JWT auth · `m3-auth`
-
-- Migration `V3__users.sql`.
-- Register, login, `GET /api/me`. BCrypt passwords, JWT signed with `SEATLOCK_JWT_SECRET`.
-- Roles CUSTOMER / ORGANISER / ADMIN; organisers manage only their own venues and events.
-- CORS limited to `SEATLOCK_WEB_ORIGIN`.
-- Web: sign up, sign in, sign out; organiser screens behind the organiser role.
-
-Tests: wrong password (401), missing token (401), wrong role (403), organiser cannot edit another
-organiser's event (403), duplicate email (409).
+stays in paise end to end; organiser cannot edit another organiser's event (403).
 
 ## M4 · Seat holds under concurrency · `m4-holds`
 

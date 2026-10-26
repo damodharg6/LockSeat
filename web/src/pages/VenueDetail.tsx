@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useAuth } from '../auth/useAuth'
 import { api, ApiError } from '../lib/api'
 import { parseRows } from '../lib/rows'
 import type { AddSeatsResponse, SectionSummary, VenueDetail as Venue } from '../lib/types'
@@ -62,6 +63,7 @@ function AddSeatsForm({ venueId, onAdded }: { venueId: string; onAdded: () => vo
 }
 
 export default function VenueDetail() {
+  const { canManageVenues } = useAuth()
   const { venueId = '' } = useParams()
   const [venue, setVenue] = useState<Venue | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -90,9 +92,11 @@ export default function VenueDetail() {
           ? <p className="muted">No seats yet.</p>
           : venue.sections.map((s) => <SeatGrid key={s.id} section={s} />)}
       </section>
-      <section className="card">
-        <AddSeatsForm venueId={venueId} onAdded={load} />
-      </section>
+      {canManageVenues && (
+        <section className="card">
+          <AddSeatsForm venueId={venueId} onAdded={load} />
+        </section>
+      )}
     </div>
   )
 }

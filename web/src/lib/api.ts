@@ -1,3 +1,5 @@
+import { tokenStore } from './token'
+
 export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080').replace(/\/$/, '')
 
 /** RFC 9457 problem returned by the API for every error. */
@@ -21,12 +23,19 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  const token = tokenStore.get()
+  if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`)
 
   let res: Response
   try {
     res = await fetch(`${API_URL}${path}`, { ...init, headers })
   } catch {
     throw new ApiError({ status: 0, title: 'Network error', detail: 'Could not reach the SeatLock API.' })
+  }
+
+  if (res.status === 401 && token) {
+    tokenStore.clear()
+    window.dispatchEvent(new Event('seatlock:signed-out'))
   }
 
   if (!res.ok) {

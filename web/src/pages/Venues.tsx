@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/useAuth'
 import { api, ApiError } from '../lib/api'
 import type { PageResponse, Venue } from '../lib/types'
 
@@ -39,6 +40,7 @@ function CreateVenueForm({ onCreated }: { onCreated: () => void }) {
 }
 
 export default function Venues() {
+  const { canManageVenues } = useAuth()
   const [page, setPage] = useState(0)
   const [data, setData] = useState<PageResponse<Venue> | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -80,9 +82,13 @@ export default function Venues() {
           </div>
         )}
       </section>
-      <section className="card">
-        <CreateVenueForm onCreated={() => (page === 0 ? load() : setPage(0))} />
-      </section>
+      {canManageVenues ? (
+        <section className="card">
+          <CreateVenueForm onCreated={() => (page === 0 ? load() : setPage(0))} />
+        </section>
+      ) : (
+        <p className="muted">Organisers can add venues. <Link to="/login">Sign in</Link> with an organiser account.</p>
+      )}
     </div>
   )
 }

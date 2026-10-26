@@ -1,6 +1,6 @@
 # SeatLock design
 
-Status: draft for review. Nothing here is built yet; docs/MILESTONES.md says what exists.
+This is the target design. docs/MILESTONES.md says which parts are built.
 
 ## 1. Goal
 
@@ -50,7 +50,7 @@ multi-currency. Money is INR only.
 | `Hold` | A customer's temporary claim on seats | expires_at; ACTIVE → CONFIRMED / EXPIRED / RELEASED |
 | `Order` | Checkout of a hold | total_paise, status, idempotency key |
 | `Ticket` | Proof of purchase for one event seat | **unique on event_seat_id** |
-| `User` | Customer or organiser | role CUSTOMER / ORGANISER / ADMIN |
+| `User` | Buyer or organiser | role BUYER / ORGANISER / ADMIN |
 | `OutboxEvent` | Pending domain event | published flag, created_at |
 
 `EventSeat` is the bulk table: publishing an event with a 40,000-seat stadium inserts 40,000 rows.
@@ -154,11 +154,26 @@ k6 load test against the running app with several instances.
 
 ## 7. Security
 
-- Stateless JWT bearer tokens (signed with a key from `SEATLOCK_JWT_SECRET`), passwords hashed
-  with BCrypt.
-- Roles: CUSTOMER buys; ORGANISER manages own venues and events; ADMIN everything.
+- **Stateless JWT.** `POST /api/v1/auth/login` returns an HS256 access token signed with
+  `JWT_SECRET` (at least 32 bytes). Claims: `sub` = user id, `email`, `role`, `iss`, `iat`, `exp`.
+  Tokens last 15 minutes. Every instance validates tokens with the shared secret, so there is no
+  session store and any instance can serve any request.
+- Validation uses Spring Security's OAuth2 resource server (`NimbusJwtDecoder`): signature,
+  algorithm, expiry and issuer are checked; the `role` claim becomes `ROLE_<role>`.
+- Passwords are hashed with BCrypt (cost 10, random salt per hash). Passwords longer than 72 bytes
+  are rejected, because BCrypt ignores everything after byte 72.
+- Login returns the same 401 for unknown email and wrong password, and runs a BCrypt check against
+  a dummy hash for unknown emails so response time does not reveal which emails exist.
+- Roles: BUYER (default on signup) buys; ORGANISER creates venues, seats and events; ADMIN
+  everything. Access rules are URL-based and live in one place, `auth/SecurityConfig`.
+- Sessions are STATELESS and CSRF protection is off: the API reads tokens only from the
+  `Authorization` header, never from cookies, so a cross-site request cannot carry credentials.
+- 401 and 403 are written as RFC 9457 ProblemDetail by `ProblemDetailAuthHandler`, matching every
+  other error.
 - CORS allows only the configured web origin (`SEATLOCK_WEB_ORIGIN`).
-- Rate limiting on login and hold endpoints, counters in Redis.
+- There is no public way to become an organiser. Locally, the `dev` profile seeds one organiser
+  account on startup; that bean does not exist in any other profile.
+- Planned: rate limiting on login and hold endpoints, counters in Redis (M6).
 
 ## 8. Data and migrations
 
@@ -180,7 +195,8 @@ src/main/java/com/damodhar/seatlock/
   inventory/         EventSeat, seat map
   hold/              ...
   order/             Order, Ticket, PaymentGateway
-  user/ auth/        ...
+  user/              User, Role, UserController (/users/me), dev organiser seeder
+  auth/              AuthController, AuthService, TokenService, SecurityConfig
   outbox/            OutboxEvent, publisher
 src/main/resources/db/migration/   V1__..., V2__...
 web/                               React + TypeScript + Vite
@@ -197,7 +213,7 @@ web/                               React + TypeScript + Vite
 ## 11. Configuration and deployment
 
 - All settings come from environment variables with local defaults in `application.yml`
-  (`SPRING_DATASOURCE_URL`, `SEATLOCK_REDIS_URL`, `SEATLOCK_KAFKA_BOOTSTRAP`, `SEATLOCK_JWT_SECRET`,
+  (`SPRING_DATASOURCE_URL`, `SEATLOCK_REDIS_URL`, `SEATLOCK_KAFKA_BOOTSTRAP`, `JWT_SECRET`,
   `SEATLOCK_HOLD_TTL`, `SEATLOCK_WEB_ORIGIN`). No secrets in the repo.
 - `docker-compose.yml` runs PostgreSQL 16, Redis and Kafka for local development.
 - API: Docker image deployed to Render from `render.yaml`. Web: Netlify site `seatlock-tickets`,
@@ -211,5 +227,5 @@ web/                               React + TypeScript + Vite
    demo (`SEATLOCK_OUTBOX_ENABLED=false`). Draft assumes the second.
 2. **Hold limits.** Draft: max 10 seats per hold, one active hold per customer per event.
 3. **Hold TTL.** Draft: 10 minutes.
-4. **Auth timing.** Draft puts auth in M3 so holds belong to real users; M1–M2 endpoints are open
-   until then.
+4. **Auth timing.** Resolved: auth moved to M2, before events, so every event and hold belongs to a
+   real user from the start.

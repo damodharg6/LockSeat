@@ -117,3 +117,14 @@ th { color: var(--sl-ink-soft); font-weight: 600; font-size: .9rem; }
 .seat-row { display: flex; gap: 3px; align-items: center; }
 .seat-row-label { font-family: var(--sl-mono); font-size: .75rem; color: var(--sl-ink-soft); min-width: 2.2em; }
 .seat { width: 10px; height: 10px; flex: none; border-radius: 3px; background: var(--sl-accent); opacity: .85; }
+
+.auth-card { max-width: 480px; }
+.hint { font-size: .85rem; font-weight: 400; }
+.details { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin: 0 0 16px; }
+.details dt { color: var(--sl-ink-soft); }
+.details dd { margin: 0; }
+.link-button {
+  background: none; border: 0; padding: 0; font: inherit; font-weight: 500;
+  color: var(--sl-ink-soft); cursor: pointer;
+}
+.link-button:hover { color: var(--sl-ink); }

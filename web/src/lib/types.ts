@@ -35,3 +35,19 @@ export interface AddSeatsResponse {
   section: string
   seatsCreated: number
 }
+
+export type Role = 'BUYER' | 'ORGANISER' | 'ADMIN'
+
+export interface User {
+  id: number
+  email: string
+  fullName: string
+  role: Role
+  createdAt: string
+}
+
+export interface TokenResponse {
+  accessToken: string
+  tokenType: string
+  expiresIn: number
+}

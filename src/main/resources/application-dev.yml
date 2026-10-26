@@ -1,0 +1,9 @@
+# Local development only. Activate with: mvn spring-boot:run -Dspring-boot.run.profiles=dev
+seatlock:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-jwt-secret-not-for-production-0123456789}
+  dev:
+    organiser:
+      email: ${DEV_ORGANISER_EMAIL:organiser@seatlock.local}
+      password: ${DEV_ORGANISER_PASSWORD:organiser-dev-pass}
+      full-name: Dev Organiser

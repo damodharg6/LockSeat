@@ -44,3 +44,9 @@ springdoc:
 
 seatlock:
   web-origin: ${SEATLOCK_WEB_ORIGIN:http://localhost:5173}
+  jwt:
+    # No default on purpose: the app refuses to start without JWT_SECRET unless the "dev" profile
+    # (application-dev.yml) supplies a local-only value.
+    secret: ${JWT_SECRET:}
+    issuer: seatlock
+    ttl: ${JWT_TTL:PT15M}

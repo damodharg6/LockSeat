@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -20,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.damodhar.seatlock.AbstractIntegrationTest;
+import com.damodhar.seatlock.user.Role;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -29,14 +31,59 @@ class VenueControllerIT extends AbstractIntegrationTest {
     MockMvc mockMvc;
     @Autowired
     ObjectMapper json;
+
+    String organiser;
+
+    @BeforeEach
+    void signInAsOrganiser() {
+        organiser = bearer(Role.ORGANISER);
+    }
     @Test
-    void createVenueReturns201WithLocation() throws Exception {
+    void organiserCreatesVenueWith201AndLocation() throws Exception {
         postJson("/api/v1/venues", "{\"name\":\"Shanmukhananda Hall\",\"city\":\"Mumbai\"}")
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", startsWith("/api/v1/venues/")))
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.name").value("Shanmukhananda Hall"))
                 .andExpect(jsonPath("$.createdAt").exists());
+    }
+
+    @Test
+    void anonymousCannotCreateVenue() throws Exception {
+        mockMvc.perform(post("/api/v1/venues").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Nope\",\"city\":\"Pune\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("https://seatlock.dev/problems/unauthorized"));
+    }
+
+    @Test
+    void buyerGets403OnCreateVenueAndAddSeats() throws Exception {
+        long venueId = createVenue("Buyer Blocked Hall");
+        String buyer = bearer(Role.BUYER);
+
+        postJson("/api/v1/venues", "{\"name\":\"Nope\",\"city\":\"Pune\"}", buyer)
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("https://seatlock.dev/problems/forbidden"))
+                .andExpect(jsonPath("$.instance").value("/api/v1/venues"));
+        postJson("/api/v1/venues/" + venueId + "/seats", seatsBody("Stalls", List.of("A"), 5), buyer)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminCanCreateVenue() throws Exception {
+        postJson("/api/v1/venues", "{\"name\":\"Admin Hall\",\"city\":\"Pune\"}", bearer(Role.ADMIN))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void readsArePublic() throws Exception {
+        long venueId = createVenue("Public Hall");
+
+        mockMvc.perform(get("/api/v1/venues")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/venues/" + venueId)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/venues/" + venueId + "/seats")).andExpect(status().isOk());
     }
 
     @Test
@@ -175,7 +222,13 @@ class VenueControllerIT extends AbstractIntegrationTest {
                 "section", section, "rowLabels", rows, "seatsPerRow", seatsPerRow));
     }
 
+    /** Writes are sent as an organiser unless a different Authorization header is given. */
     ResultActions postJson(String path, String body) throws Exception {
-        return mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(body));
+        return postJson(path, body, organiser);
+    }
+
+    ResultActions postJson(String path, String body, String authorization) throws Exception {
+        return mockMvc.perform(post(path).header("Authorization", authorization)
+                .contentType(MediaType.APPLICATION_JSON).content(body));
     }
 }

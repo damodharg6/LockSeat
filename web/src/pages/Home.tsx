@@ -6,8 +6,8 @@ type Status = 'done' | 'doing' | 'todo'
 const BUILD_PROGRESS: { tag: string; title: string; status: Status }[] = [
   { tag: 'M0', title: 'Project foundation: API skeleton, errors, CI, hosting', status: 'done' },
   { tag: 'M1', title: 'Venues, sections and seats', status: 'done' },
-  { tag: 'M2', title: 'Events, price tiers and seat inventory', status: 'todo' },
-  { tag: 'M3', title: 'Users and JWT auth', status: 'todo' },
+  { tag: 'M2', title: 'Users, signup/login, JWT, roles', status: 'doing' },
+  { tag: 'M3', title: 'Events and event seat inventory', status: 'todo' },
   { tag: 'M4', title: 'Seat holds under concurrency', status: 'todo' },
   { tag: 'M5', title: 'Checkout, fake payments and tickets', status: 'todo' },
   { tag: 'M6', title: 'Seat-map cache and rate limiting', status: 'todo' },

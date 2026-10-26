@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.damodhar.seatlock.user.Role;
+
 class SeatLockApplicationIT extends AbstractIntegrationTest {
 
     @Autowired
@@ -31,8 +33,21 @@ class SeatLockApplicationIT extends AbstractIntegrationTest {
 
     @Test
     void unknownPathReturnsProblemDetail() throws Exception {
-        mockMvc.perform(get("/api/v1/does-not-exist"))
+        mockMvc.perform(get("/api/v1/does-not-exist").header("Authorization", bearer(Role.BUYER)))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+    }
+
+    @Test
+    void anonymousRequestToProtectedPathIs401() throws Exception {
+        mockMvc.perform(get("/api/v1/does-not-exist"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+    }
+
+    @Test
+    void swaggerUiIsPublic() throws Exception {
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(status().isOk());
     }
 }
