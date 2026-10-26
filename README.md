@@ -3,7 +3,7 @@
 Event ticketing backend whose one promise is that **a seat is never sold twice**, even under
 heavy concurrency and with several app instances running.
 
-> Status: M0 (foundation) and M1 (venues and seats) are done; M2 (users and auth) is in review. See
+> Status: M0–M2 (foundation, venues, auth) are done; M3 (events and seat inventory) is in review. See
 > [docs/MILESTONES.md](docs/MILESTONES.md) for what comes next and [docs/DESIGN.md](docs/DESIGN.md)
 > for how it will work.
 
@@ -21,6 +21,12 @@ heavy concurrency and with several app instances running.
 | `GET` | `/api/v1/venues/{id}` | Public | Venue with its sections and rows |
 | `POST` | `/api/v1/venues/{id}/seats` | Organiser, admin | Add a block of seats: `{section, rowLabels, seatsPerRow}` |
 | `GET` | `/api/v1/venues/{id}/seats` | Public | List seats (paginated) |
+| `POST` | `/api/v1/events` | Organiser, admin | Create a DRAFT event: `{venueId, title, startsAt, sectionPrices}` (paise) |
+| `POST` | `/api/v1/events/{id}/publish` | Owner, admin | Publish and generate one event seat per venue seat |
+| `POST` | `/api/v1/events/{id}/cancel` | Owner, admin | Cancel a draft or published event |
+| `GET` | `/api/v1/events` | Public | Published events, `?city=&from=&to=`, paginated, soonest first |
+| `GET` | `/api/v1/events/{id}` | Public* | Event with prices and seat counts (*drafts: owner and admin only) |
+| `GET` | `/api/v1/events/{id}/seats` | Public* | Event seats, `?status=&section=`, paginated |
 
 Send the token as `Authorization: Bearer <accessToken>`. Errors, including 401 and 403, are
 ProblemDetail JSON.
@@ -34,7 +40,8 @@ ProblemDetail JSON.
 - `PageResponse` envelope ready for paginated list endpoints.
 - Health check at `/actuator/health`, OpenAPI at `/v3/api-docs`, Swagger UI at `/swagger-ui.html`.
 - React + TypeScript web app in `web/`: API status, build progress, sign up / sign in / account,
-  venue list, venue seat map, and forms to add venues and seats (organisers only).
+  venue list and seat map, events list with filters, event page with prices, availability and
+  seats, and organiser forms to add venues, seats and events and to publish or cancel them.
 - Unit tests (Mockito/MockMvc) and integration tests against a real PostgreSQL in Testcontainers.
 - GitHub Actions CI, Dockerfile, Render blueprint and Netlify config.
 

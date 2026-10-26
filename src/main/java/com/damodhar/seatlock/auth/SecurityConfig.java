@@ -31,7 +31,8 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
 /**
  * Stateless JWT security. All access rules live in {@link #apiSecurity} so they can be read in
- * one place: public reads, organiser-only writes, everything else needs a valid token.
+ * one place: public reads, organiser-only writes, everything else needs a valid token. Rules that
+ * depend on the data (who owns an event) live in the service that loads that data.
  */
 @Configuration
 @EnableWebSecurity
@@ -53,7 +54,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/venues", "/api/v1/venues/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/venues", "/api/v1/venues/*/seats")
+                        .hasAnyRole("ORGANISER", "ADMIN")
+                        // Ownership of a specific event is checked in EventService.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/events", "/api/v1/events/*/publish",
+                                "/api/v1/events/*/cancel")
                         .hasAnyRole("ORGANISER", "ADMIN")
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**")

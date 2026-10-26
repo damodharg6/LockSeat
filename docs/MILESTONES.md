@@ -9,8 +9,8 @@ web app shows the new API features, and README.md, docs/ABOUT.md and the Build p
 |---|---|---|---|
 | M0 | `m0-foundation` | Project foundation | Done |
 | M1 | `m1-venues` | Venues, sections and seats | Done |
-| M2 | `m2-auth` | Users, signup/login, JWT, roles | In progress |
-| M3 | `m3-events-inventory` | Events + event seat inventory | Not started |
+| M2 | `m2-auth` | Users, signup/login, JWT, roles | Done |
+| M3 | `m3-events` | Events and seat inventory | In progress |
 | M4 | `m4-holds` | Seat holds under concurrency | Not started |
 | M5 | `m5-checkout` | Checkout, fake payments and tickets | Not started |
 | M6 | `m6-redis` | Seat-map cache and rate limiting | Not started |
@@ -74,24 +74,34 @@ Tests: BCrypt hashing and per-user salt, duplicate email, bad login with identic
 without a token, expired / tampered / foreign-key / garbage tokens get 401, BUYER gets 403 and
 ORGANISER / ADMIN get 201 on venue writes, anonymous writes get 401, reads stay public.
 
-## M3 · Events + event seat inventory · `m3-events-inventory`
+## M3 · Events and seat inventory · `m3-events`
 
-- Migration `V3__events_inventory.sql`: `event`, `price_tier`, `event_seat`.
-- Organiser creates an event (DRAFT) at a venue, attaches price tiers (`price_paise BIGINT`) to
-  sections. Organisers manage only their own events.
-- Publish event: generates one `event_seat` per venue seat in batches (pooled sequence), status
-  AVAILABLE. Publishing twice is rejected.
-- Public endpoints: paginated list of published events; seat map for an event with status and price.
-- Web: events list, event page with the seat map coloured by status and tier.
+- Migration `V3__events_inventory.sql`: `event` (with `version`), `event_section_price`,
+  `event_seat` (pooled sequence, `version`, unique `(event_id, seat_id)`).
+- Migration `V4__event_indexes.sql`: `event (status, starts_at)` for the public list,
+  `event_seat (event_id, status)` for seat filtering, and the event foreign keys.
+- `POST /api/v1/events` (ORGANISER/ADMIN): `{venueId, title, startsAt, sectionPrices}` → 201 DRAFT,
+  organiser = caller. `startsAt` must be in the future; every venue section needs a price and no
+  unknown sections are allowed (400). Prices in paise.
+- `POST /api/v1/events/{id}/publish` (owner or ADMIN): DRAFT → PUBLISHED and one set-based
+  `INSERT ... SELECT` creates an event seat per venue seat at its section price. Twice → 409.
+- `POST /api/v1/events/{id}/cancel` (owner or ADMIN): DRAFT or PUBLISHED → CANCELLED; again → 409.
+- `GET /api/v1/events`: PUBLISHED only, filters `city`, `from`, `to`, paginated, sorted by
+  `startsAt`. `GET /api/v1/events/{id}`: drafts visible only to owner and admins.
+- `GET /api/v1/events/{id}/seats?status=&section=`: paginated seats with section, row, number,
+  price and status.
+- `EventSeat.version` mapped with `@Version`, ready for M5.
+- Web: events list with filters, event page with prices, availability and a filterable seat table,
+  publish/cancel for the owner, create-event form for organisers.
 
-Tests: publish without price tiers fails; double publish fails; seat count matches venue; money
-stays in paise end to end; organiser cannot edit another organiser's event (403).
+Tests: status transitions (all nine pairs), owner/admin rules, price coverage, every endpoint's
+success and error cases, and publishing a 2,000-seat venue creates exactly 2,000 event seats.
 
 ## M4 · Seat holds under concurrency · `m4-holds`
 
 The core promise. See DESIGN.md §4.
 
-- Migration `V4__holds.sql`: `hold`, plus `hold_id`, `held_until`, `version` on `event_seat`.
+- Migration `V5__holds.sql`: `hold`, plus `hold_id` and `held_until` on `event_seat`.
 - `POST /api/events/{id}/holds` with seat ids: single conditional `UPDATE`, all-or-nothing,
   sorted ids to avoid deadlocks, 409 ProblemDetail listing unavailable seats.
 - `DELETE /api/holds/{id}` releases a hold. `GET /api/holds/{id}` shows seats and expiry.
@@ -105,7 +115,7 @@ fails (403); limits enforced.
 
 ## M5 · Checkout, fake payments and tickets · `m5-checkout`
 
-- Migration `V5__orders_tickets.sql`: `orders` (unique `user_id, idempotency_key`), `ticket`
+- Migration `V6__orders_tickets.sql`: `orders` (unique `user_id, idempotency_key`), `ticket`
   (unique `event_seat_id`).
 - `PaymentGateway` interface with a fake implementation driven by test card numbers.
 - `POST /api/orders` with `Idempotency-Key`: confirm HELD → SOLD only for the caller's unexpired
@@ -128,7 +138,7 @@ Tests: cache evicted after a hold; rate limit returns 429; Redis down does not b
 
 ## M7 · Outbox and Kafka events · `m7-outbox-kafka`
 
-- Migration `V6__outbox.sql`.
+- Migration `V7__outbox.sql`.
 - `OrderConfirmed`, `HoldExpired` written to the outbox in the business transaction.
 - Publisher polls with `SKIP LOCKED`, sends to Kafka, marks published; at-least-once delivery.
 - Example consumer: ticket confirmation notifier (logs / stores a notification record),

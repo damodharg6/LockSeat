@@ -3,7 +3,7 @@
 SeatLock is a portfolio project: an event ticketing backend that focuses on one hard problem,
 selling reserved seats correctly when many customers want the same seat at the same moment.
 
-## Current state (M2 in review)
+## Current state (M3 in review)
 
 The project foundation is in place: a Spring Boot 3.5 / Java 21 API with consistent RFC 9457
 error responses, a paginated response envelope, Flyway-managed PostgreSQL schema, health and
@@ -20,7 +20,12 @@ BCrypt, and sign-in returns a 15-minute JWT access token. The API keeps no sessi
 instance can check any token. Anyone can browse venues and seats, but only organisers and admins
 can create them. For local development, an organiser account is created automatically.
 
-There are no events, holds or sales yet.
+Organisers create events at their venues with a price for every section, then publish them.
+Publishing creates one sellable seat per venue seat in a single database statement, copying the
+section price onto each seat; a 2,000-seat venue is published in one step. Anyone can browse
+upcoming events by city and date and see which seats are available.
+
+Seats cannot be held or bought yet; that comes in M4 and M5.
 
 ## Planned
 

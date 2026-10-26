@@ -44,9 +44,9 @@ multi-currency. Money is INR only.
 | `Venue` | A physical place | name, city |
 | `Section` | Part of a venue | e.g. "Balcony" |
 | `Seat` | A physical seat | section, row label, seat number; unique per section |
-| `Event` | A show at a venue | DRAFT → PUBLISHED → CANCELLED; starts_at, sales window |
-| `PriceTier` | Price for a group of seats | `price_paise BIGINT` |
-| `EventSeat` | One seat for one event | the row that gets locked; status, version, hold reference |
+| `Event` | A show at a venue | DRAFT → PUBLISHED → CANCELLED (DRAFT → CANCELLED too); owned by an organiser |
+| `EventSectionPrice` | Price of one section for one event | `price_paise BIGINT`, unique per (event, section) |
+| `EventSeat` | One seat for one event | the row that gets locked; price copied at publish, status, `@Version` |
 | `Hold` | A customer's temporary claim on seats | expires_at; ACTIVE → CONFIRMED / EXPIRED / RELEASED |
 | `Order` | Checkout of a hold | total_paise, status, idempotency key |
 | `Ticket` | Proof of purchase for one event seat | **unique on event_seat_id** |
@@ -54,8 +54,25 @@ multi-currency. Money is INR only.
 | `OutboxEvent` | Pending domain event | published flag, created_at |
 
 `EventSeat` is the bulk table: publishing an event with a 40,000-seat stadium inserts 40,000 rows.
-It uses a pooled sequence (allocationSize 50) and JDBC batching so that insert is a few hundred
-round trips, not 40,000.
+They are created by one set-based statement, `INSERT INTO event_seat ... SELECT ... FROM seat JOIN
+event_section_price`, so the database builds every row in a single round trip instead of the app
+loading 40,000 seats and writing them back. Ids come from a pooled sequence (`event_seat_seq`,
+increment 50) via `nextval` per row; ids therefore jump by 50, which is harmless for BIGINT keys.
+
+Each event seat stores its own `price_paise`, copied from the section price at publish time. A
+sold ticket's price is then a fact about that seat, not a lookup that later edits could change.
+
+### Event state machine
+
+```
+DRAFT --publish--> PUBLISHED --cancel--> CANCELLED
+  |                                         ^
+  +-----------------cancel------------------+
+```
+
+Illegal transitions return 409. Publishing checks the status first, flushes the change, then
+inserts seats; `Event` has a `@Version` column, so two concurrent publishes cannot both succeed.
+Drafts are invisible (404) to anyone but their organiser and admins.
 
 ### Seat state machine (per EventSeat)
 
@@ -180,8 +197,10 @@ k6 load test against the running app with several instances.
 - Flyway owns the schema; Hibernate `ddl-auto: validate` only checks entities match it.
 - Applied migrations are never edited; every change is a new `V<n>__description.sql`.
 - Money columns are `BIGINT` paise. Ids are `BIGINT` from sequences.
-- Key indexes: `event_seat (event_id, status)`, `event_seat (hold_id)`, `hold (expires_at)
-  WHERE status = 'ACTIVE'`, unique `ticket (event_seat_id)`, unique `orders (user_id, idempotency_key)`.
+- Key indexes (built): `event (status, starts_at)` for the public event list, `event_seat (event_id,
+  status)` for seat filters, unique `event_seat (event_id, seat_id)`. Planned: `event_seat (hold_id)`,
+  `hold (expires_at) WHERE status = 'ACTIVE'`, unique `ticket (event_seat_id)`, unique
+  `orders (user_id, idempotency_key)`.
 
 ## 9. Code layout
 
@@ -191,7 +210,7 @@ src/main/java/com/damodhar/seatlock/
   common/error/      GlobalExceptionHandler, domain exceptions
   common/web/        PageResponse
   venue/             VenueController, VenueService, VenueRepository, Venue, dto/
-  event/             ...
+  event/             Event, EventSeat, EventService (state machine, publish), specifications
   inventory/         EventSeat, seat map
   hold/              ...
   order/             Order, Ticket, PaymentGateway

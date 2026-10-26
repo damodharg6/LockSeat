@@ -128,3 +128,21 @@ th { color: var(--sl-ink-soft); font-weight: 600; font-size: .9rem; }
   color: var(--sl-ink-soft); cursor: pointer;
 }
 .link-button:hover { color: var(--sl-ink); }
+
+.page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.page-head h1 { margin: 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 12px; }
+.filters label { min-width: 160px; flex: 1 1 160px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.plain-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.plain-list li { display: flex; justify-content: space-between; gap: 12px; }
+.prices { border: 1px solid var(--sl-line); border-radius: var(--sl-radius); padding: 12px 16px; display: grid; gap: 12px; }
+.prices legend { padding: 0 6px; color: var(--sl-ink-soft); }
+
+.event-draft { color: var(--sl-ink-soft); }
+.event-published { color: var(--sl-success); border-color: currentColor; }
+.event-cancelled { color: var(--sl-danger); border-color: currentColor; }
+.seat-status { font-weight: 600; font-size: .9rem; }
+.seat-available { color: var(--sl-success); }
+.seat-held { color: var(--sl-accent); }
+.seat-sold { color: var(--sl-muted); }

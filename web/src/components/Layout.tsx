@@ -14,6 +14,7 @@ export default function Layout() {
           </Link>
           <nav className="nav-links">
             <NavLink to="/" end>Home</NavLink>
+            <NavLink to="/events">Events</NavLink>
             <NavLink to="/venues">Venues</NavLink>
             {user ? (
               <>

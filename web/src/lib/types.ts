@@ -51,3 +51,46 @@ export interface TokenResponse {
   tokenType: string
   expiresIn: number
 }
+
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
+export type EventSeatStatus = 'AVAILABLE' | 'HELD' | 'SOLD'
+
+export interface VenueSummary {
+  id: number
+  name: string
+  city: string
+}
+
+export interface EventSummary {
+  id: number
+  title: string
+  startsAt: string
+  status: EventStatus
+  venue: VenueSummary
+  organiserId: number
+}
+
+export interface SectionPrice {
+  sectionId: number
+  section: string
+  pricePaise: number
+}
+
+export interface EventDetail extends EventSummary {
+  createdAt: string
+  publishedAt: string | null
+  cancelledAt: string | null
+  sectionPrices: SectionPrice[]
+  totalSeats: number
+  seatCounts: Partial<Record<EventSeatStatus, number>>
+}
+
+export interface EventSeat {
+  id: number
+  seatId: number
+  section: string
+  row: string
+  number: number
+  pricePaise: number
+  status: EventSeatStatus
+}
